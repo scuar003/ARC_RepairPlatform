@@ -16,6 +16,10 @@ include_directories(
   include
 )
 
+add_library(repair_menu src/main_menu.cpp)
+target_include_directories(repair_menu PUBLIC include)
+ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
+
 #set dependecies
 set(dependencies
   repair_interface
@@ -25,6 +29,7 @@ set(dependencies
   )
 
 add_executable(supervisor src/supervisor.cpp)
+target_link_libraries(supervisor repair_menu)
 ament_target_dependencies(supervisor ${dependencies})
 
 install(TARGETS

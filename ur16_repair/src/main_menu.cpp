@@ -1,12 +1,28 @@
 #include <ur16_repair/main_menu.hpp>
+#include <iostream>
 
+namespace ur16repair {
 MainMenu::MainMenu() {}
 
-IntMarker MainMenu::createMenu(const std::string &frame_id) {
-    std::cout << "Creating Main Menu" << std::endl;
-    auto marker = makeMenu();
-    return makeMenuMarker(frame_id, marker);
+void MainMenu::addToServer(Server &server, const std::string &frame_id) {
+    buildEntries();
+    auto marker = makeMenuMarker(frame_id, makeMenu());
+    server.insert(marker);
+    menu_handler.apply(server, marker.name);
 }
+
+void MainMenu::buildEntries() {
+    menu_repair = menu_handler.insert("Repair Operations");
+    menu_detect_surfaces = menu_handler.insert("Detect Surfaces", std::bind(&MainMenu::feedbackCb, this, _1));
+    menu_scan_env = menu_handler.insert("Scan Environment");
+    
+}
+
+void MainMenu::feedbackCb(const MarkerFeedback::ConstSharedPtr &fb) {
+    if (fb -> menu_entry_id == menu_detect_surfaces)
+        std::cout << "Dectecting surfaces " << std::endl;
+}
+
 Marker MainMenu::makeMenu() {
     Marker menuType;
     menuType.type = Marker::SPHERE;
@@ -80,7 +96,7 @@ IntMarker MainMenu::makeMenuMarker(const std::string &frame_id, const Marker &p)
         menu.controls.push_back(rotateX_control);
 
         IntControl rotateY_control;
-        rotateY_control.name = "rotate_x";
+        rotateY_control.name = "rotate_y";
         rotateY_control.interaction_mode = IntControl::ROTATE_AXIS;
         rotateY_control.orientation.w = 1;
         rotateY_control.orientation.x = 0;
@@ -89,7 +105,7 @@ IntMarker MainMenu::makeMenuMarker(const std::string &frame_id, const Marker &p)
         menu.controls.push_back(rotateY_control);
 
         IntControl rotateZ_control;
-        rotateZ_control.name = "rotate_x";
+        rotateZ_control.name = "rotate_z";
         rotateZ_control.interaction_mode = IntControl::ROTATE_AXIS;
         rotateZ_control.orientation.w = 1;
         rotateZ_control.orientation.x = 1;
@@ -100,3 +116,4 @@ IntMarker MainMenu::makeMenuMarker(const std::string &frame_id, const Marker &p)
         return menu;
 }
 
+}
