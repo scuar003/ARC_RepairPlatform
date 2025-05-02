@@ -2,18 +2,18 @@
 
 MainMenu::MainMenu() {}
 
-IntMarker MainMenu::createMenu(const float scale) {
+IntMarker MainMenu::createMenu(const std::string &frame_id) {
     std::cout << "Creating Main Menu" << std::endl;
-    auto marker = makeMenu(scale);
-    return makeMenuMarker(marker);
+    auto marker = makeMenu();
+    return makeMenuMarker(frame_id, marker);
 }
-Marker MainMenu::makeMenu(const float scale) {
+Marker MainMenu::makeMenu() {
     Marker menuType;
     menuType.type = Marker::SPHERE;
     // type, scale, color
-    menuType.scale.x = scale * 0.25;
-    menuType.scale.y = scale * 0.25;
-    menuType.scale.z = scale * 0.25;
+    menuType.scale.x = 1.0 * 0.25;
+    menuType.scale.y = 1.0 * 0.25;
+    menuType.scale.z = 1.0 * 0.25;
     menuType.color.r = 1.0f;
     menuType.color.g = 1.0f;
     menuType.color.b = 1.0f;
@@ -31,7 +31,7 @@ IntControl MainMenu::makeMenuControl(const Marker &p) {
     return menuControl;
 }
 
-IntMarker MainMenu::makeMenuMarker(const Marker &p) {
+IntMarker MainMenu::makeMenuMarker(const std::string &frame_id, const Marker &p) {
     IntMarker menu;
         menu.header.frame_id = frame_id;
         menu.pose.position.x = 1.0;

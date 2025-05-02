@@ -24,13 +24,11 @@ using IntControl = visualization_msgs::msg::InteractiveMarkerControl;
 class MainMenu {
     public:
         MainMenu();
-        IntMarker createMenu(const float scale);
+        IntMarker createMenu(const std::string &frame_id);
     private:
-        Marker makeMenu(const float scale);
+        Marker makeMenu();
         IntControl makeMenuControl(const Marker &p);
-        IntMarker makeMenuMarker (const Marker &p);
-        std::string frame_id;
-        std::string menuName;
+        IntMarker makeMenuMarker (const std::string &frame_id, const Marker &p);
 };
 
 #endif
