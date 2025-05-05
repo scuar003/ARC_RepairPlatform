@@ -12,15 +12,19 @@ void MainMenu::addToServer(Server &server, const std::string &frame_id) {
 }
 
 void MainMenu::buildEntries() {
+    auto on_event = [this](const MarkerFeedback::ConstSharedPtr &fb){feedbackCb(fb);};
+    
     menu_repair = menu_handler.insert("Repair Operations");
-    menu_detect_surfaces = menu_handler.insert("Detect Surfaces", std::bind(&MainMenu::feedbackCb, this, _1));
-    menu_scan_env = menu_handler.insert("Scan Environment");
+    menu_detect_surfaces = menu_handler.insert(menu_repair, "Detect Surfaces", on_event);
+    menu_scan_env = menu_handler.insert(menu_repair, "Scan Environment", on_event);
     
 }
 
 void MainMenu::feedbackCb(const MarkerFeedback::ConstSharedPtr &fb) {
     if (fb -> menu_entry_id == menu_detect_surfaces)
-        std::cout << "Dectecting surfaces " << std::endl;
+        std::cout << "Request: 'Surfaces' ... " << std::endl;
+    if (fb -> menu_entry_id == menu_scan_env)
+        std::cout << "Request: 'Environment Scan' ... " << std::endl;
 }
 
 Marker MainMenu::makeMenu() {
