@@ -11,19 +11,27 @@ find_package(repair_interface REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(interactive_markers REQUIRED)
+find_package(rclcpp_action REQUIRED)
+
 
 include_directories(
   include
 )
 
-add_library(repair_menu src/main_menu.cpp)
+add_library(repair_menu src/ui/main_menu.cpp)
 target_include_directories(repair_menu PUBLIC include)
 ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
+
+#devel not tested
+add_library(repair_operations src/repair/repair_operations.cpp)
+target_include_directories(repair_operations PUBLIC include)
+ament_target_dependencies( repair_operations ur_rtde)
 
 #set dependecies
 set(dependencies
   repair_interface
   rclcpp
+  rclcpp_action
   visualization_msgs
   interactive_markers
   )
@@ -32,8 +40,13 @@ add_executable(supervisor src/supervisor.cpp)
 target_link_libraries(supervisor repair_menu)
 ament_target_dependencies(supervisor ${dependencies})
 
+#repair server 
+add_executable(repair_server src/repair/repair_server.cpp)
+ament_target_dependencies(repair_server ${dependencies})
+
 install(TARGETS
   supervisor
+  repair_server
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
