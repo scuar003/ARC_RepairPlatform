@@ -1,11 +1,11 @@
 #include <ur16_repair/repair/repair_operations.hpp>
 #include <iostream>
 
-namespace ur16repair {
+namespace repairs {
 
-    RepairOperations::RepairOperations() {};
+    RepairOperations::RepairOperations() {}
     void RepairOperations::scanEnv(const std::string &rb_ip){
-        std::cout << rb_ip << std::endl;
+        std::cout << "Connecting to robot at: " << rb_ip << std::endl;
         // RTDEControlInterface robot_(rb_ip);
         // auto acc = 0.08, vel = 0.08;
         // //Start

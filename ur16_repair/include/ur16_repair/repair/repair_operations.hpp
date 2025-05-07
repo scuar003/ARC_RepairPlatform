@@ -4,7 +4,7 @@
 #include <string>
 #include <ur_rtde/rtde_control_interface.h>
 
-namespace ur16repair {
+namespace repairs {
 
 using namespace ur_rtde;
 

@@ -16,17 +16,17 @@ class RepairServer : public rclcpp::Node {
                 std::bind(&RepairServer::goalCb, this, _1, _2),
                 std::bind(&RepairServer::cancelCb, this, _1),
                 std::bind(&RepairServer::executeCb, this, _1));
-                RCLCPP_INFO(this->get_logger(), "Repair Server Ready to receive commnads");
+                RCLCPP_INFO(this->get_logger(), "Repair Server Ready to receive commands");
             }
     private:
         rclcpp_action::GoalResponse goalCb (const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const RepairCommand::Goal> goal) {
             (void) uuid;
             RCLCPP_INFO(this->get_logger(), "Received goal ... ");
-            if (goal->command == " ") {
-                RCLCPP_WARN(this->get_logger(), " Rejecting goal, operation is not vailid ");
+            if (goal->command.empty()) {
+                RCLCPP_WARN(this->get_logger(), " Rejecting goal, operation is not valid ");
                 return rclcpp_action::GoalResponse::REJECT;
             }
-            RCLCPP_INFO(this->get_logger(), "Acepting Goal ");
+            RCLCPP_INFO(this->get_logger(), "Accepting Goal ");
             return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
         }
 
@@ -40,13 +40,14 @@ class RepairServer : public rclcpp::Node {
             std::string cmd = goal_handle -> get_goal() -> command;
             auto result = std::make_shared<RepairCommand::Result>();
             RCLCPP_INFO(this->get_logger(), "Executing '%s' operation", cmd.c_str());
-            repair_op.scanEnv("192.187.6.56");
+            if (cmd == "scan_env") repair_op.scanEnv("192.187.6.56");
+            
             result->completed = true;
             goal_handle->succeed(result);
         }
 
         rclcpp_action::Server<RepairCommand>::SharedPtr repair_server;
-        ur16repair::RepairOperations repair_op;
+        repairs::RepairOperations repair_op;
 };
 
 int main(int argc, char** argv) {
