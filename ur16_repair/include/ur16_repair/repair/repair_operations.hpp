@@ -11,7 +11,10 @@ using namespace ur_rtde;
 class RepairOperations {
     public:
         RepairOperations();
+        void startOperation(const std::string &op, const std::string &rb_ip);        
+    private:
         void scanEnv(const std::string&rb_ip);
+        void detectSurfaces();
 };
 
 }

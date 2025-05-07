@@ -10,6 +10,8 @@ using RepairGoalHandle = rclcpp_action::ServerGoalHandle<RepairCommand>;
 class RepairServer : public rclcpp::Node {
     public:
         RepairServer() : Node ("repair_server") {
+            this->declare_parameter("robot_ip", "192.168.1.85");
+            robot_ip = this->get_parameter("robot_ip").as_string();
             repair_server = rclcpp_action::create_server<RepairCommand>(
                 this, 
                 "repair_server",
@@ -40,7 +42,8 @@ class RepairServer : public rclcpp::Node {
             std::string cmd = goal_handle -> get_goal() -> command;
             auto result = std::make_shared<RepairCommand::Result>();
             RCLCPP_INFO(this->get_logger(), "Executing '%s' operation", cmd.c_str());
-            if (cmd == "scan_env") repair_op.scanEnv("192.187.6.56");
+            // if (cmd == "scan_env") repair_op.scanEnv("192.187.6.56");
+            repair_op.startOperation(cmd, robot_ip); // startOperation just need to get the cmd and robot ip
             
             result->completed = true;
             goal_handle->succeed(result);
@@ -48,6 +51,7 @@ class RepairServer : public rclcpp::Node {
 
         rclcpp_action::Server<RepairCommand>::SharedPtr repair_server;
         repairs::RepairOperations repair_op;
+        std::string robot_ip;
 };
 
 int main(int argc, char** argv) {
