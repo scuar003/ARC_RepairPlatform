@@ -4,9 +4,7 @@
 namespace repairs {
 
     RepairOperations::RepairOperations() {}
-    void RepairOperations::startOperation(const std::string &op, const std::string &rb_ip) {
-        if(op == "scan_env") scanEnv(rb_ip);
-    }
+
     void RepairOperations::scanEnv(const std::string &rb_ip){
         std::cout << "Connecting to robot at: " << rb_ip << std::endl;
         // RTDEControlInterface robot_(rb_ip);
@@ -19,7 +17,6 @@ namespace repairs {
         // robot_.moveJ({0.83, -0.94, -1.33, -1.65, 1.55, 0.0}, acc, vel);
         // //end
         // robot_.moveJ({-1.57, -0.94, -1.33, -1.65, 1.55, 0.0}, acc, vel);
-
     }
 
 }

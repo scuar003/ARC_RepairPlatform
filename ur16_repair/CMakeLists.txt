@@ -12,6 +12,12 @@ find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(Open3D REQUIRED)
+
 
 set(UR_RTDE_DIR "/home/robotics/p_devel/libs_/ur_rtde")
 set(UR_RTDE_INCLUDE_DIR "${UR_RTDE_DIR}/include")
@@ -20,16 +26,22 @@ set(UR_RTDE_LIBRARY "${UR_RTDE_DIR}/build/librtde.so")
 include_directories(
   include
   ${UR_RTDE_INCLUDE_DIR}
+  ${Open3D_INCLUDE_DIRS}
 )
+
+link_directories(${Open3D_LIBRARY_DIRS})
 
 add_library(repair_menu src/ui/main_menu.cpp)
 target_include_directories(repair_menu PUBLIC include)
 ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
 
-#devel not tested
-add_library(repair_operations src/repair/repair_operations.cpp)
+#devel not fully tested
+add_library(repair_operations src/repair/repair_operations.cpp src/repair/surface_detection.cpp)
 target_include_directories(repair_operations PUBLIC include)
 target_link_libraries(repair_operations ${UR_RTDE_LIBRARY})
+ament_target_dependencies(repair_operations rclcpp sensor_msgs geometry_msgs tf2_ros tf2_geometry_msgs Open3D )
+
+
 
 #set dependecies
 set(dependencies
