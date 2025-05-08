@@ -16,7 +16,13 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(Open3D REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED COMPONENTS common filters octree)
+
+
 
 
 set(UR_RTDE_DIR "/home/robotics/p_devel/libs_/ur_rtde")
@@ -27,9 +33,16 @@ include_directories(
   include
   ${UR_RTDE_INCLUDE_DIR}
   ${Open3D_INCLUDE_DIRS}
-)
+  ${PCL_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 
-link_directories(${Open3D_LIBRARY_DIRS})
+)
+link_directories(
+  ${PCL_LIBRARY_DIRS}
+  ${Open3D_LIBRARY_DIRS}
+)
+add_definitions(${PCL_DEFINITIONS})
+
 
 add_library(repair_menu src/ui/main_menu.cpp)
 target_include_directories(repair_menu PUBLIC include)
@@ -62,9 +75,23 @@ add_executable(repair_server src/repair/repair_server.cpp)
 target_link_libraries(repair_server repair_operations)
 ament_target_dependencies(repair_server ${dependencies})
 
+#laser to cloud node 
+add_executable(laser_to_cloud src/cloud/laser_to_cloud.cpp)
+ament_target_dependencies(laser_to_cloud rclcpp sensor_msgs  pcl_conversions tf2_ros  tf2_eigen)
+target_link_libraries(laser_to_cloud ${PCL_LIBRARIES}  Eigen3::Eigen)
+
+add_executable(voxel_mapper src/cloud/laser_map.cpp)
+ament_target_dependencies(voxel_mapper rclcpp sensor_msgs tf2_ros tf2_eigen pcl_conversions)
+target_link_libraries(voxel_mapper ${PCL_INCLUDE_DIRS})
+
+
+
+
 install(TARGETS
   supervisor
   repair_server
+  laser_to_cloud
+  voxel_mapper
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

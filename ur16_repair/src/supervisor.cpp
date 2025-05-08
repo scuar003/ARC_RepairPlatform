@@ -3,6 +3,7 @@
 #include <repair_interface/action/repair_action.hpp>
 #include <ur16_repair/ui/main_menu.hpp>
 
+// Action Client 
 
 using RepairCommand = repair_interface::action::RepairAction;
 using RepairGoalHandle = rclcpp_action::ClientGoalHandle<RepairCommand>;
@@ -37,7 +38,8 @@ class Supervisor : public rclcpp::Node {
         }
 
     private:
-        void onMenuSelection(const std::string& cmd) {
+        void onMenuSelection(const std::string& msg) {
+            cmd = msg; //bug when sending a request before the one before finish executing
             std::cout << cmd << std::endl;
             if (!repair_client->wait_for_action_server()) {
                 RCLCPP_ERROR(get_logger(), "Repair Action Server Not available ");
@@ -63,7 +65,7 @@ class Supervisor : public rclcpp::Node {
         void resultCb(const RepairGoalHandle::WrappedResult &result) {
             auto status = result.code;
             if (status == rclcpp_action::ResultCode::SUCCEEDED)
-                RCLCPP_INFO(get_logger(), "Goal Succeeded ");
+                RCLCPP_INFO(get_logger(), "Goal '%s' Succeeded ", cmd.c_str());
             else if (status == rclcpp_action::ResultCode::CANCELED)
                 RCLCPP_INFO(get_logger(), "Goal Canceled ");
             else if (status == rclcpp_action::ResultCode::ABORTED)
@@ -80,7 +82,7 @@ class Supervisor : public rclcpp::Node {
                             
         }
             // Actions - Interactions 
-        std::string frame_id;
+        std::string frame_id, cmd;
         std::unique_ptr<ur16repair::Server> menu_server_;
         std::unique_ptr<ur16repair::MainMenu> main_menu_;
         rclcpp_action::Client<RepairCommand>::SharedPtr repair_client; 

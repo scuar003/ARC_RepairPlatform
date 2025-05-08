@@ -13,6 +13,7 @@ using PoseArray = geometry_msgs::msg::PoseArray;
 class RepairServer : public rclcpp::Node {
     public:
         RepairServer() : Node ("repair_server") {
+            cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
             this->declare_parameter("robot_ip", "192.168.1.85");
             this->declare_parameter("target_frame", "base_link");
             robot_ip = this->get_parameter("robot_ip").as_string();
@@ -27,7 +28,8 @@ class RepairServer : public rclcpp::Node {
                 "repair_server",
                 std::bind(&RepairServer::goalCb, this, _1, _2),
                 std::bind(&RepairServer::cancelCb, this, _1),
-                std::bind(&RepairServer::executeCb, this, _1));
+                std::bind(&RepairServer::executeCb, this, _1),
+                rcl_action_server_get_default_options(), cb_group );
                 RCLCPP_INFO(this->get_logger(), "Repair Server Ready to receive commands");
 
             cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
@@ -77,6 +79,7 @@ class RepairServer : public rclcpp::Node {
         //members - atributes
         rclcpp_action::Server<RepairCommand>::SharedPtr repair_server;
         rclcpp::Subscription<PointCloud2>::SharedPtr cloud_sub;
+        rclcpp::CallbackGroup::SharedPtr cb_group;
         PointCloud2::SharedPtr cloud_msg;
         repairs::RepairOperations repair_op;
         std::string robot_ip, target_frame;
@@ -89,7 +92,9 @@ class RepairServer : public rclcpp::Node {
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<RepairServer>();
-    rclcpp::spin(node);
+    rclcpp::executors::MultiThreadedExecutor exec; 
+    exec.add_node(node);
+    exec.spin();
     rclcpp::shutdown();
     return 0;
 }
