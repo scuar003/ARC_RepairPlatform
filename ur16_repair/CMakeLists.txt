@@ -21,6 +21,7 @@ find_package(Open3D REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters octree)
+find_package(std_srvs REQUIRED)
 
 
 
@@ -63,6 +64,7 @@ set(dependencies
   rclcpp_action
   visualization_msgs
   interactive_markers
+  std_srvs
   )
 
 #supervisor
@@ -81,7 +83,7 @@ ament_target_dependencies(laser_to_cloud rclcpp sensor_msgs  pcl_conversions tf2
 target_link_libraries(laser_to_cloud ${PCL_LIBRARIES}  Eigen3::Eigen)
 
 add_executable(voxel_mapper src/cloud/laser_map.cpp)
-ament_target_dependencies(voxel_mapper rclcpp sensor_msgs tf2_ros tf2_eigen pcl_conversions)
+ament_target_dependencies(voxel_mapper rclcpp sensor_msgs tf2_ros tf2_eigen pcl_conversions std_srvs)
 target_link_libraries(voxel_mapper ${PCL_INCLUDE_DIRS})
 
 

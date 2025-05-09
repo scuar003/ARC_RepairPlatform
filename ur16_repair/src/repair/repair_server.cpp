@@ -2,12 +2,15 @@
 #include <rclcpp_action/rclcpp_action.hpp> 
 #include <repair_interface/action/repair_action.hpp>
 #include <ur16_repair/repair/repair_operations.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 
 using namespace std::placeholders;
+using namespace std::chrono;
 using RepairCommand = repair_interface::action::RepairAction;
 using RepairGoalHandle = rclcpp_action::ServerGoalHandle<RepairCommand>;
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 using PoseArray = geometry_msgs::msg::PoseArray;
+using SetBool = std_srvs::srv::SetBool;
 
  
 class RepairServer : public rclcpp::Node {
@@ -33,12 +36,11 @@ class RepairServer : public rclcpp::Node {
                 RCLCPP_INFO(this->get_logger(), "Repair Server Ready to receive commands");
 
             cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
+            maping_client = this->create_client<SetBool>("set_publish_active");
             }
     private:
-        //pointcloud callback 
-        void cloudCb(const PointCloud2::SharedPtr msg) {cloud_msg = msg;}
 
-        // Actiion service 
+        //--------------------- Actiion service 
         rclcpp_action::GoalResponse goalCb (const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const RepairCommand::Goal> goal) {
             (void) uuid;
             RCLCPP_INFO(this->get_logger(), "Received goal ... ");
@@ -67,12 +69,35 @@ class RepairServer : public rclcpp::Node {
 
                 // repair_op.displayPlanes(corners); // not yet implemented    
             }
-            if(cmd == "scan_env" ) 
+            if(cmd == "scan_env" ) {
+                startMapping();
                 repair_op.scanEnv(robot_ip);
+                stopMapping();
+            }
              
-            
             result->completed = true;
             goal_handle->succeed(result);
+        }
+
+        //-----------------------Helpers
+        //pointcloud callback 
+        void cloudCb(const PointCloud2::SharedPtr msg) {cloud_msg = msg;}
+
+        void startMapping() {
+            while(!maping_client -> wait_for_service(1s)) {
+                RCLCPP_INFO(this->get_logger(), "Wating for service...");
+            }
+            auto request = std::make_shared<SetBool::Request>();
+            request ->data = true;
+            maping_client -> async_send_request(request);
+        }
+        void stopMapping() {
+            while(!maping_client -> wait_for_service(1s)) {
+                RCLCPP_INFO(this->get_logger(), "Wating for service...");
+            }
+            auto request = std::make_shared<SetBool::Request>();
+            request ->data = false;
+            maping_client -> async_send_request(request);
         }
 
 
@@ -80,6 +105,7 @@ class RepairServer : public rclcpp::Node {
         rclcpp_action::Server<RepairCommand>::SharedPtr repair_server;
         rclcpp::Subscription<PointCloud2>::SharedPtr cloud_sub;
         rclcpp::CallbackGroup::SharedPtr cb_group;
+        rclcpp::Client<SetBool>::SharedPtr maping_client;
         PointCloud2::SharedPtr cloud_msg;
         repairs::RepairOperations repair_op;
         std::string robot_ip, target_frame;

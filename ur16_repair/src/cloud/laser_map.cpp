@@ -1,21 +1,21 @@
 /*  voxel_mapper.cpp  --------------------------------------------------------
 
-   Fast incremental 3‑D reconstruction for RViz using a voxel‑centroid map.
+   Incremental 3‑D reconstruction server:
+   Publishes the voxel‑centroid map ONLY when the “publish_active” flag
+   is true.  Flag can be toggled at run‑time with the SetBool service
+   ~/set_publish_active.
 
-   Author: 2025‑05‑08
-   ROS 2   Humble Hawksbill
-   Build:  add pcl and tf2 dependencies in package.xml & CMakeLists.txt
+   ROS 2 Humble Hawksbill
 ---------------------------------------------------------------------------*/
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/common/transforms.h>   
-
-
+#include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
@@ -26,7 +26,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <Eigen/Dense>
-
 #include <queue>
 #include <mutex>
 #include <chrono>
@@ -54,30 +53,31 @@ public:
     tf_listener_(tf_buffer_),
     map_octree_(voxel_resolution_)
   {
+    /* ---------------- Parameters ---------------- */
     declare_parameter<std::string>("input_topic", "/point_cloud");
     declare_parameter<std::string>("target_frame", "base_link");
-    declare_parameter<double>("voxel_size",   0.02);     // metres
+    declare_parameter<double>("voxel_size",   0.02);   // m
     declare_parameter<int>("sor_k",           24);
     declare_parameter<double>("sor_stddev",   1.5);
     declare_parameter<bool>("use_radius",     false);
     declare_parameter<int>("ror_k",           16);
-    declare_parameter<double>("ror_radius",   0.05);     // metres
+    declare_parameter<double>("ror_radius",   0.05);   // m
     declare_parameter<double>("publish_hz",   3.0);
+    declare_parameter<bool>("publish_active", false);  // <-- NEW
 
+    input_topic_       = get_parameter("input_topic").as_string();
+    target_frame_      = get_parameter("target_frame").as_string();
+    voxel_resolution_  = get_parameter("voxel_size").as_double();
+    sor_k_             = get_parameter("sor_k").as_int();
+    sor_stddev_        = get_parameter("sor_stddev").as_double();
+    use_radius_        = get_parameter("use_radius").as_bool();
+    ror_k_             = get_parameter("ror_k").as_int();
+    ror_radius_        = get_parameter("ror_radius").as_double();
+    publish_enabled_   = get_parameter("publish_active").as_bool(); // NEW
 
-    input_topic_   = get_parameter("input_topic").as_string();
-    target_frame_  = get_parameter("target_frame").as_string();
-    voxel_resolution_ = get_parameter("voxel_size").as_double();
-    sor_k_         = get_parameter("sor_k").as_int();
-    sor_stddev_    = get_parameter("sor_stddev").as_double();
-    use_radius_    = get_parameter("use_radius").as_bool();
-    ror_k_         = get_parameter("ror_k").as_int();
-    ror_radius_    = get_parameter("ror_radius").as_double();
-
-    /* Re‑initialise octree with param value */
     map_octree_ = OctreeT(voxel_resolution_);
 
-    /* QoS that keeps up with depth cameras */
+    /* ---------------- I/O ----------------------- */
     auto qos = rclcpp::SensorDataQoS();
 
     sub_ = create_subscription<MsgT>(
@@ -86,55 +86,64 @@ public:
 
     pub_ = create_publisher<MsgT>("processed_points", 1);
 
-    /* Worker timer ≈ 30 Hz; publisher timer from param */
+    /* ---------------- Timers -------------------- */
     worker_timer_ = create_wall_timer(33ms,
         std::bind(&VoxelMapper::processQueue, this));
 
-    double pub_period = 1.0 / std::max(1.0, get_parameter("publish_hz").as_double());
+    double pub_period = 1.0 /
+        std::max(1.0, get_parameter("publish_hz").as_double());
+
     pub_timer_ = create_wall_timer(
         std::chrono::duration<double>(pub_period),
         std::bind(&VoxelMapper::publishMap, this));
 
-    RCLCPP_INFO(get_logger(), "VoxelMapper ready — listening on %s",
-                input_topic_.c_str());
+    /* ---------------- Service ------------------- */
+    srv_ = create_service<std_srvs::srv::SetBool>(
+        "set_publish_active",
+        std::bind(&VoxelMapper::handleSetPublish, this,
+                  std::placeholders::_1, std::placeholders::_2));
+
+    RCLCPP_INFO(get_logger(),
+        "VoxelMapper ready — listening on %s, publish_active=%s",
+        input_topic_.c_str(),
+        publish_enabled_ ? "true" : "false");
   }
 
 private:
-  /* ------------------------------  Data ----------------------------------*/
+  /* ---------------------------------  Data  -------------------------------- */
   struct Job { MsgT::ConstSharedPtr msg; };
 
-  const std::string frame_failed_ = "transform_failed";
-
+  /* Parameters & state */
   std::string input_topic_;
   std::string target_frame_;
-
-  /* Parameters */
   double voxel_resolution_{0.02};
-  int     sor_k_;
-  double  sor_stddev_;
-  bool    use_radius_;
-  int     ror_k_;
-  double  ror_radius_;
+  int    sor_k_;
+  double sor_stddev_;
+  bool   use_radius_;
+  int    ror_k_;
+  double ror_radius_;
+  bool   publish_enabled_{false};                     // <-- NEW
 
   /* ROS interfaces */
   rclcpp::Subscription<MsgT>::SharedPtr sub_;
   rclcpp::Publisher<MsgT>::SharedPtr    pub_;
   rclcpp::TimerBase::SharedPtr          worker_timer_;
   rclcpp::TimerBase::SharedPtr          pub_timer_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr srv_;   // NEW
 
   /* TF */
-  tf2_ros::Buffer           tf_buffer_;
+  tf2_ros::Buffer            tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
   /* Thread‑safe job queue */
-  std::mutex                queue_mutex_;
-  std::queue<Job>           job_queue_;
+  std::mutex            queue_mutex_;
+  std::queue<Job>       job_queue_;
 
   /* Global voxel map */
   using OctreeT = pcl::octree::OctreePointCloudVoxelCentroid<PointT>;
   OctreeT map_octree_;
 
-  /* ---------------------------  Callbacks --------------------------------*/
+  /* ---------------------------  Callbacks ----------------------------------*/
   void enqueueCloud(const MsgT::ConstSharedPtr msg)
   {
     std::lock_guard<std::mutex> lock(queue_mutex_);
@@ -151,6 +160,7 @@ private:
 
     while (!local.empty()) {
       auto job = local.front(); local.pop();
+
       CloudPtr cloud(new CloudT);
       pcl::fromROSMsg(*job.msg, *cloud);
 
@@ -159,21 +169,21 @@ private:
 
       CloudPtr clean(new CloudT);
       filterCloud(cloud, clean);
-
       integrate(clean);
     }
   }
 
   void publishMap()
   {
+    if (!publish_enabled_) return;                 // <-- NEW guard
 
     std::vector<PointT, Eigen::aligned_allocator<PointT>> vox_centroids;
-    map_octree_.getVoxelCentroids(vox_centroids);   // <-- CORRECT TYPE
+    map_octree_.getVoxelCentroids(vox_centroids);
 
     if (vox_centroids.empty()) return;
 
     CloudPtr cloud(new CloudT);
-    cloud->points = std::move(vox_centroids);       // move into cloud
+    cloud->points = std::move(vox_centroids);
     cloud->width  = cloud->points.size();
     cloud->height = 1;
     cloud->is_dense = false;
@@ -183,9 +193,21 @@ private:
     msg.header.frame_id = target_frame_;
     msg.header.stamp    = now();
     pub_->publish(msg);
-    return;
-    }
-  
+  }
+
+  /* ---------------- Service callback --------------------------------------*/
+  void handleSetPublish(
+      const std::shared_ptr<std_srvs::srv::SetBool::Request>  req,
+      std::shared_ptr<std_srvs::srv::SetBool::Response>       res)
+  {
+    publish_enabled_ = req->data;
+    res->success = true;
+    res->message = publish_enabled_ ?
+        "Publishing enabled" : "Publishing disabled";
+
+    RCLCPP_INFO(get_logger(), "Set publish_active -> %s",
+                publish_enabled_ ? "true" : "false");
+  }
 
   /* --------------------------  Helpers  ----------------------------------*/
   bool transformToTarget(CloudPtr &cloud, const std::string &src_frame)
@@ -194,25 +216,22 @@ private:
 
     geometry_msgs::msg::TransformStamped tf;
     try {
-      tf = tf_buffer_.lookupTransform(
-            target_frame_, src_frame, tf2::TimePointZero);
-    }
-    catch (const tf2::TransformException &ex) {
-      RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 2000,
+      tf = tf_buffer_.lookupTransform(target_frame_, src_frame,
+                                      tf2::TimePointZero);
+    } catch (const tf2::TransformException &ex) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
           "TF lookup from %s to %s failed: %s",
           src_frame.c_str(), target_frame_.c_str(), ex.what());
       return false;
     }
 
-    Eigen::Affine3d eig_tf = tf2::transformToEigen(tf);
-    pcl::transformPointCloud(*cloud, *cloud, eig_tf);
+    Eigen::Matrix4f tf_f = tf2::transformToEigen(tf).matrix().cast<float>();
+    pcl::transformPointCloud(*cloud, *cloud, tf_f);
     return true;
   }
 
   void filterCloud(const CloudConst &in, CloudPtr &out)
   {
-    /* 1) Statistical Outlier Removal */
     pcl::StatisticalOutlierRemoval<PointT> sor;
     sor.setInputCloud(in);
     sor.setMeanK(sor_k_);
@@ -220,7 +239,6 @@ private:
     CloudPtr tmp(new CloudT);
     sor.filter(*tmp);
 
-    /* 2) (optional) Radius Outlier Removal */
     if (use_radius_) {
       pcl::RadiusOutlierRemoval<PointT> ror;
       ror.setInputCloud(tmp);
@@ -231,7 +249,6 @@ private:
       tmp.swap(tmp2);
     }
 
-    /* 3) Voxel Grid down‑sample */
     pcl::VoxelGrid<PointT> vg;
     vg.setInputCloud(tmp);
     vg.setLeafSize(voxel_resolution_,
@@ -254,7 +271,6 @@ int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
 
-  /* Multi‑threaded executor keeps timers and TF spinning smoothly */
   rclcpp::executors::MultiThreadedExecutor exec;
   auto node = std::make_shared<VoxelMapper>();
   exec.add_node(node);
