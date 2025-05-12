@@ -19,14 +19,18 @@ using namespace ur_rtde;
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 using PoseArray = geometry_msgs::msg::PoseArray;
 
+
 class RepairOperations {
     public:
         RepairOperations();
         RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string& target_frame);
         PoseArray detect(const PointCloud2::SharedPtr cloud_msg);
         void scanEnv(const std::string&rb_ip);
+
     private:
-        
+
+
+
         std::string target_frame_;
         std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 

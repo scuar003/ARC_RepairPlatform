@@ -1,8 +1,9 @@
-# Goal 
-string command 
+# Goal
+string command
 ---
-# Result 
+# Result
 bool completed
+geometry_msgs/PoseArray poses
 ---
-# Feedback 
-string status  
+# Feedback
+string status

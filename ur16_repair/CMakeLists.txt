@@ -44,18 +44,28 @@ link_directories(
 )
 add_definitions(${PCL_DEFINITIONS})
 
+set(repair_helpers
+  src/repair/repair_operations.cpp 
+  src/repair/surface_detection.cpp 
+
+)
+
 
 add_library(repair_menu src/ui/main_menu.cpp)
 target_include_directories(repair_menu PUBLIC include)
 ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
 
-#devel not fully tested
-add_library(repair_operations src/repair/repair_operations.cpp src/repair/surface_detection.cpp)
+
+add_library(repair_operations ${repair_helpers})
 target_include_directories(repair_operations PUBLIC include)
-target_link_libraries(repair_operations ${UR_RTDE_LIBRARY})
-ament_target_dependencies(repair_operations rclcpp sensor_msgs geometry_msgs tf2_ros tf2_geometry_msgs Open3D )
+target_link_libraries(repair_operations ${UR_RTDE_LIBRARY} ur16_geometry)
+ament_target_dependencies(repair_operations rclcpp sensor_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs Open3D )
 
-
+#devel not fully tested
+add_library(ur16_geometry src/repair/plane_geometry.cpp)
+target_include_directories(ur16_geometry PUBLIC include)
+target_link_libraries(ur16_geometry Eigen3::Eigen)
+ament_target_dependencies(ur16_geometry geometry_msgs)
 
 #set dependecies
 set(dependencies
