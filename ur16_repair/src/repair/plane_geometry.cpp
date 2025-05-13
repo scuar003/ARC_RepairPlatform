@@ -37,7 +37,7 @@ std::vector<Vector> Plane::corners() const {return corners_;}
 
 Vector Plane::vertex(int i) const {return corners_[i];}
 
-Vector Plane::centrroid() const {
+Vector Plane::centroid() const {
     return 0.25*(corners_[0] + corners_[1] + corners_[2] + corners_[3]);
 }
 
@@ -66,6 +66,10 @@ double Plane::lenght() const {
 
 double Plane::widht() const {
     return (corners_[2] - corners_[1]).norm();
+}
+void Plane::updateCorner(int idx, const Vector &n_pos) {
+    if (idx < 0 || idx > 4) return;
+    corners_[idx] = n_pos;
 }
 
 void Plane::print() {

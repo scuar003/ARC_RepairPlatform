@@ -13,6 +13,7 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 
+
 namespace repairs {
 
 using namespace ur_rtde;
@@ -26,7 +27,6 @@ class RepairOperations {
         RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string& target_frame);
         PoseArray detect(const PointCloud2::SharedPtr cloud_msg);
         void scanEnv(const std::string&rb_ip);
-
     private:
 
 

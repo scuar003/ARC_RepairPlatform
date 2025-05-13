@@ -1,9 +1,9 @@
 # Goal
 string command
+geometry_msgs/PoseArray area
 ---
 # Result
 bool completed
-geometry_msgs/PoseArray poses
 ---
 # Feedback
 string status

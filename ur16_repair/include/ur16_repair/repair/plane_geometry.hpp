@@ -3,6 +3,7 @@
 #include <vector>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 
 namespace plane_geometry {
@@ -10,6 +11,7 @@ namespace plane_geometry {
     using Quat = Eigen::Quaterniond;
     using Pose = geometry_msgs::msg::Pose;
     using Point = geometry_msgs::msg::Point;
+    using PointStamped = geometry_msgs::msg::PointStamped;
     using PoseArray = geometry_msgs::msg::PoseArray;
 
 
@@ -25,10 +27,11 @@ namespace plane_geometry {
             
             std::vector<Vector> corners() const; 
             Vector vertex (int i) const;
-            Vector centrroid() const;
+            Vector centroid() const;
             Vector normal() const ;
             Vector projectPointOntoPlane(const Vector& point) const;
             Quat quat() const;
+            void updateCorner(int index, const Vector &new_pos);
             double lenght() const;
             double widht()const;
             void print();  

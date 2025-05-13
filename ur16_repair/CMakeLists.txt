@@ -44,13 +44,12 @@ link_directories(
 )
 add_definitions(${PCL_DEFINITIONS})
 
+## ----------------------- Local Libraries ---------------- #
 set(repair_helpers
   src/repair/repair_operations.cpp 
   src/repair/surface_detection.cpp 
 
 )
-
-
 add_library(repair_menu src/ui/main_menu.cpp)
 target_include_directories(repair_menu PUBLIC include)
 ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
@@ -77,6 +76,8 @@ set(dependencies
   std_srvs
   )
 
+
+### ----------------- Nodes and Executables -------------------- ###
 #supervisor
 add_executable(supervisor src/supervisor.cpp)
 target_link_libraries(supervisor repair_menu)
@@ -86,6 +87,11 @@ ament_target_dependencies(supervisor ${dependencies})
 add_executable(repair_server src/repair/repair_server.cpp)
 target_link_libraries(repair_server repair_operations)
 ament_target_dependencies(repair_server ${dependencies})
+
+#renderer
+add_executable(renderer src/ui/renderer.cpp)
+target_link_libraries(renderer repair_operations ur16_geometry)
+ament_target_dependencies(renderer ${dependencies})
 
 #laser to cloud node 
 add_executable(laser_to_cloud src/cloud/laser_to_cloud.cpp)
@@ -102,6 +108,7 @@ target_link_libraries(voxel_mapper ${PCL_INCLUDE_DIRS})
 install(TARGETS
   supervisor
   repair_server
+  renderer
   laser_to_cloud
   voxel_mapper
   ARCHIVE DESTINATION lib

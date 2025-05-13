@@ -37,7 +37,7 @@ class RepairServer : public rclcpp::Node {
 
             cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
             maping_client = this->create_client<SetBool>("set_publish_active");
-            renderer_pub_ = this->create_publisher<repairs::PoseArray>("rendered_surfaces", 10);
+            poses_pub_ = this->create_publisher<repairs::PoseArray>("rendered_surfaces", 10);
             }
     private:
 
@@ -67,7 +67,7 @@ class RepairServer : public rclcpp::Node {
             if(cmd == "detect_surfaces" ) {
                 auto corners = PoseArray();
                 corners = repair_op.detect(cloud_msg);
-                result->poses = corners;
+                poses_pub_->publish(corners);
             }
             if(cmd == "scan_env" ) {
                 startMapping();
@@ -106,7 +106,7 @@ class RepairServer : public rclcpp::Node {
         rclcpp::Subscription<PointCloud2>::SharedPtr cloud_sub;
         rclcpp::CallbackGroup::SharedPtr cb_group;
         rclcpp::Client<SetBool>::SharedPtr maping_client;
-        rclcpp::Publisher<repairs::PoseArray>::SharedPtr renderer_pub_;
+        rclcpp::Publisher<repairs::PoseArray>::SharedPtr poses_pub_;
 
         PointCloud2::SharedPtr cloud_msg;
         repairs::RepairOperations repair_op;
