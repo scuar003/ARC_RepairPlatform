@@ -61,6 +61,7 @@ class RepairServer : public rclcpp::Node {
 
         void executeCb (const std::shared_ptr<RepairGoalHandle> goal_handle) {
             std::string cmd = goal_handle -> get_goal() -> command;
+            PoseArray area = goal_handle -> get_goal() -> area;
             auto result = std::make_shared<RepairCommand::Result>();
             RCLCPP_INFO(this->get_logger(), "Executing '%s' operation", cmd.c_str());
             //start execution of cmd 
@@ -73,6 +74,13 @@ class RepairServer : public rclcpp::Node {
                 startMapping();
                 repair_op.scanEnv(robot_ip);
                 stopMapping();
+            }
+            if(cmd == "home") {
+                repair_op.moveHome(robot_ip);
+                RCLCPP_INFO(this->get_logger(), "Robot at Home Position ");
+            }
+            if(cmd == "grind") {
+                grind(area);
             }
              
             result->completed = true;
@@ -98,6 +106,10 @@ class RepairServer : public rclcpp::Node {
             auto request = std::make_shared<SetBool::Request>();
             request ->data = false;
             maping_client -> async_send_request(request);
+        }
+
+        void grind(const PoseArray &area) {
+            repair_op.getGrinder(robot_ip);
         }
 
 

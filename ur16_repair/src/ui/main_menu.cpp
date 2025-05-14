@@ -18,7 +18,7 @@ namespace ur16repair {
         menu_detect_surfaces = menu_handler.insert(menu_repair, "Detect Surfaces", on_event);
         menu_scan_env = menu_handler.insert(menu_repair, "Scan Environment", on_event);
         //Move 
-        menu_home = menu_handler.insert("Home");
+        menu_home = menu_handler.insert("Home", on_event);
         
     }
 
@@ -28,6 +28,7 @@ namespace ur16repair {
         std::string cmd;
         if (fb -> menu_entry_id == menu_detect_surfaces) cmd = "detect_surfaces";
         else if (fb -> menu_entry_id == menu_scan_env) cmd = "scan_env";
+        else if (fb -> menu_entry_id == menu_home) cmd = "home";
 
         if (!cmd.empty() && selection_cb) selection_cb(cmd);
         

@@ -9,7 +9,7 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/interactive_marker.hpp>
 #include <visualization_msgs/msg/interactive_marker_control.hpp>
-#include "visualization_msgs/msg/interactive_marker_feedback.hpp"
+#include <visualization_msgs/msg/interactive_marker_feedback.hpp>
 #include <interactive_markers/interactive_marker_server.hpp>
 #include <interactive_markers/menu_handler.hpp>
 
@@ -76,6 +76,7 @@ class Renderer : public rclcpp::Node {
             RCLCPP_INFO(get_logger(), "Planes have been deleted ready to display new planes");
 
         }
+        
 
         void displayPlanes(const plane_geometry::Plane &plane, int id) {
             addPlane(plane, id);
@@ -189,7 +190,7 @@ class Renderer : public rclcpp::Node {
                         int_server_->erase(marker_name);
                     }
                 }
-
+                int_server_->clear();          // ⚠ deletes every interactive marker
                 // Clear all visualization markers except those related to the selected sphere/plane
                 createSelectedPlane(planes_[selected_id], selected_id);
             }
@@ -370,9 +371,9 @@ class Renderer : public rclcpp::Node {
             int_server_ -> applyChanges();
         }
         void clearSelection (const MarkerFb::ConstSharedPtr &feedback) {
-  
+            (void) feedback;
             Marker clear_marker;
-            clear_marker.header.frame_id = "base_link"; // Same frame_id as the original marker
+            clear_marker.header.frame_id = frame_id; // Same frame_id as the original marker
             clear_marker.header.stamp = rclcpp::Clock().now();
             clear_marker.ns = "repair_area"; // Same namespace as the original marker
             clear_marker.id = 0; // Same ID as the original marker
@@ -380,20 +381,177 @@ class Renderer : public rclcpp::Node {
     
             // Publish the clear_marker to remove the previously published marker
             selected_area_pub_->publish(clear_marker);
+            int_server_->erase("Execute_Repair");
+            int_server_->applyChanges();
     
             RCLCPP_INFO(this->get_logger(), "Repair area marker cleared.");
     
             repair_area.clear();
         }
 
-        void areaCb(const plane_geometry::PointStamped::SharedPtr &point) {
+        void areaCb(const plane_geometry::PointStamped::ConstSharedPtr &msg) {
             // if all menu options are unckecked then ignore the point received
-            // if an option is checked save 4 points 
-            //called repairArea() creates linestrip of the area
-            //
-            // and the send the goal to the service action
-            //goal -> cmnd (selected option ex grind)
-            // goal -> Area(the 4 points passed as a pose array )
+            // if an option is checked save 4 points
+            //this can be done with a switch case 
+            //called repairArea(passed the string of the checked menu option) creates linestrip of the area 
+            std::string cmd;
+            Menu::CheckState state;                // local temp
+
+            menu_handler_.getCheckState(grind, state);
+            if (state == Menu::CHECKED) cmd = "grind";
+
+            menu_handler_.getCheckState(vacum, state);
+            if (state == Menu::CHECKED) cmd = "vacum";
+
+            menu_handler_.getCheckState(expo_marker, state);
+            if (state == Menu::CHECKED) cmd = "expo_marker";
+
+            if (cmd.empty()) {                     // nothing selected
+                RCLCPP_WARN(get_logger(), "No operation selected – ignored point");
+                return;
+            }
+
+            repair_area.push_back(msg->point);
+            RCLCPP_INFO(get_logger(), "Collected %zu / 4 points for '%s'",
+                        repair_area.size(), cmd.c_str());
+
+            if (repair_area.size() == 4) {
+                repairArea(cmd);                   // cmd is now the *current* one
+                repair_area.clear();
+            }
+        }
+
+        void repairArea(const std::string &cmd) {
+
+            if (repair_area.size() != 4) {
+                RCLCPP_ERROR(get_logger(), "Need 4 points for area to be created");
+                return;
+            }
+            int_server_->erase("Execute_Repair");
+            // Create a LINE_STRIP marker to represent the repair area
+            Marker line_strip;
+            line_strip.header.frame_id = frame_id;
+            line_strip.header.stamp = rclcpp::Clock().now();
+            line_strip.ns = "repair_area";
+            line_strip.id = 0; // Unique ID for this marker
+            line_strip.type = Marker::LINE_STRIP;
+            line_strip.action = Marker::ADD;
+
+            // LINE_STRIP markers use only the x component of scale, for the line width
+            line_strip.scale.x = 0.005; // Specify a suitable line width
+
+            // Set the color of the line strip
+            line_strip.color.r = 1.0f;
+            line_strip.color.g = 0.0f;
+            line_strip.color.b = 0.0f;
+            line_strip.color.a = 1.0f; // Don't forget to set the alpha!
+
+            // Assign the points from plane_points to the marker
+            for (const auto &point : repair_area)
+            {
+                line_strip.points.push_back(point);
+            }
+            // Connect the last point to the first to close the loop
+            line_strip.points.push_back(repair_area[0]);
+
+            repair_area_corners = repair_area; 
+
+            // Publish the marker
+            selected_area_pub_->publish(line_strip);
+
+            RCLCPP_INFO(this->get_logger(), "Published repair area marker.");
+
+            // Define an interactive marker
+            IntMarker execute_marker;
+            execute_marker.header.frame_id = frame_id;
+            execute_marker.header.stamp = rclcpp::Clock().now();
+            execute_marker.name = "Execute_Repair";
+            execute_marker.description = "Press to execute repair";
+
+            // Set the position (adjust according to your needs)
+            execute_marker.pose.position.x = 0.25; // Example positions
+            execute_marker.pose.position.y = 0.25;
+            execute_marker.pose.position.z = 0.25;
+            execute_marker.scale = 0.1; // Scale of the interactive marker
+
+            // Create a control that will act as a button
+            IntControl button_control;
+            button_control.interaction_mode = IntControl::BUTTON;
+            button_control.name = "button";
+
+            // Create a marker for the button
+            Marker marker;
+            marker.type = Marker::CUBE;
+            marker.scale.x = 0.05;
+            marker.scale.y = 0.05;
+            marker.scale.z = 0.05;
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            marker.color.a = 1.0;
+
+            // Add the marker to the button control
+            button_control.markers.push_back(marker);
+            button_control.always_visible = true;
+
+            // Add the control to the interactive marker
+            execute_marker.controls.push_back(button_control);
+
+            // Insert the interactive marker into the server and apply changes
+            std::cout << "The executer button has been Published" << std::endl;
+            int_server_->insert(execute_marker, [this, cmd](const MarkerFb::ConstSharedPtr &fb) { waitToExecute(fb, cmd);});
+            int_server_->applyChanges();
+        }
+
+        void waitToExecute(const MarkerFb::ConstSharedPtr &fb, const std::string &cmd){
+            if (fb -> event_type != MarkerFb::BUTTON_CLICK) return;
+
+            geometry_msgs::msg::PoseArray corners;
+            corners.header.frame_id = frame_id;
+            corners.header.stamp = get_clock() -> now();
+            for (const auto &point : repair_area_corners){
+                geometry_msgs::msg::Pose pose;
+                pose.position.x = point.x;
+                pose.position.y = point.y;
+                pose.position.z = point.z;
+
+                pose.orientation.x = 0.0f;
+                pose.orientation.y = 0.0f;
+                pose.orientation.z = 0.0f;
+                pose.orientation.w = 1.0f;
+
+                corners.poses.push_back(pose);
+            }
+            // request the server 
+            //goal -> cmd = cmd 
+            // goal -> area = corner 
+            //send goal
+            auto goal = RepairCommand::Goal();
+            goal.command = cmd;
+            goal.area = corners;
+            auto op = rclcpp_action::Client<RepairCommand>::SendGoalOptions();
+            op.result_callback = std::bind(&Renderer::resultCb, this, _1);
+            op.feedback_callback = std::bind(&Renderer::feedbackCb, this, _1,_2);
+            repair_client->async_send_goal(goal, op);
+            
+        }
+        void resultCb (const RepairGoalHandle::WrappedResult &result) {
+            auto st = result.code;
+            if (st == rclcpp_action::ResultCode::SUCCEEDED)
+                RCLCPP_INFO(get_logger(), "Goal  Succeeded ");
+            else if (st == rclcpp_action::ResultCode::CANCELED)
+                RCLCPP_INFO(get_logger(), "Goal Canceled ");
+            else if (st == rclcpp_action::ResultCode::ABORTED)
+                RCLCPP_INFO(get_logger(), "Goal Aborted ");
+        }
+        void feedbackCb(const RepairGoalHandle::SharedPtr &goal_handle, const std::shared_ptr<const RepairCommand::Feedback> fb) {
+
+            (void) goal_handle;
+            std::string c_status = fb->status;
+            RCLCPP_INFO(get_logger(), "Feedback: %s", c_status.c_str());
+            if (c_status == "cancel_action")
+                cancelGoal();
+                            
         }
         
         rclcpp::Subscription<PoseArray>::SharedPtr renderer_sub_;
