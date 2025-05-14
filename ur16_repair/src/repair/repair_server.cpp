@@ -110,6 +110,11 @@ class RepairServer : public rclcpp::Node {
 
         void grind(const PoseArray &area) {
             repair_op.getGrinder(robot_ip);
+            //tool on 
+            repair_op.grindArea(robot_ip, area);
+            //tool off
+            repair_op.returnGrinder(robot_ip);
+        //grinding complete
         }
 
 
