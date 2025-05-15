@@ -3,6 +3,7 @@
 
 #include <string>
 #include <ur_rtde/rtde_control_interface.h>
+#include <ur_rtde/rtde_receive_interface.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -14,8 +15,12 @@
 
 #include <memory>
 #include <vector>
+#include <cmath>
 #include <Eigen/Dense>
 
+namespace {
+    inline double deg2rad(double d) {return d*M_PI/180.0;}
+}
 
 namespace repairs {
 
@@ -44,10 +49,10 @@ class RepairOperations {
         static Vec3 rpyFromNormal(const Vec3 &n);
 
     /* path generation & execution */
-        std::vector<std::array<double,6>> buildPath(const std::vector<Vec3> &c, 
+        std::vector<std::vector<double>> buildPath(const std::vector<Vec3> &c, 
                                                     double grid, double lift,
                                                     int layers, double step_down);
-        void executePath(const std::vector<std::array<double,6>> &wp, double acc, double vel);
+        void executePath(const std::vector<std::vector<double>> &wp, double acc, double vel);
         
         std::unique_ptr<RTDEControlInterface> robot_;
         double rb_acc = 0.08;

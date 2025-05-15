@@ -3,6 +3,7 @@
 #include <repair_interface/action/repair_action.hpp>
 #include <ur16_repair/repair/repair_operations.hpp>
 #include <std_srvs/srv/set_bool.hpp>
+#include <std_msgs/msg/string.hpp>
 
 using namespace std::placeholders;
 using namespace std::chrono;
@@ -11,6 +12,7 @@ using RepairGoalHandle = rclcpp_action::ServerGoalHandle<RepairCommand>;
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 using PoseArray = geometry_msgs::msg::PoseArray;
 using SetBool = std_srvs::srv::SetBool;
+using String = std_msgs::msg::String;
 
  
 class RepairServer : public rclcpp::Node {
@@ -38,6 +40,7 @@ class RepairServer : public rclcpp::Node {
             cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
             maping_client = this->create_client<SetBool>("set_publish_active");
             poses_pub_ = this->create_publisher<repairs::PoseArray>("rendered_surfaces", 10);
+            tool_pub_ = this->create_publisher<String>("arduino_cmd", 10);
             }
     private:
 
@@ -75,13 +78,22 @@ class RepairServer : public rclcpp::Node {
                 repair_op.scanEnv(robot_ip);
                 stopMapping();
             }
-            if(cmd == "home") {
+            if (cmd == "home") {
                 repair_op.moveHome(robot_ip);
                 RCLCPP_INFO(this->get_logger(), "Robot at Home Position ");
             }
             if(cmd == "grind") {
-                grind(area);
+                toolState("tool_unlock");
+                repair_op.getGrinder(robot_ip);
+                toolState("tool_lock");
+                repair_op.grindArea(robot_ip, area);
+                repair_op.returnGrinder(robot_ip);
+                toolState("tool_unlock");
+                
+                
+               
             }
+      
              
             result->completed = true;
             goal_handle->succeed(result);
@@ -107,15 +119,21 @@ class RepairServer : public rclcpp::Node {
             request ->data = false;
             maping_client -> async_send_request(request);
         }
-
-        void grind(const PoseArray &area) {
-            repair_op.getGrinder(robot_ip);
-            //tool on 
-            repair_op.grindArea(robot_ip, area);
-            //tool off
-            repair_op.returnGrinder(robot_ip);
-        //grinding complete
+        void toolState(const std::string &s) {
+            auto tool = String();
+            tool.data = s;
+            tool_pub_->publish(tool);
         }
+
+        //void grind(const PoseArray &area) {
+        //     //tool off
+        //     repair_op.getGrinder(robot_ip);
+        //     //tool on 
+        //     repair_op.grindArea(robot_ip, area);
+        //     //tool off
+        //     repair_op.returnGrinder(robot_ip);
+        // //grinding complete
+        // }
 
 
         //members - atributes
@@ -124,6 +142,7 @@ class RepairServer : public rclcpp::Node {
         rclcpp::CallbackGroup::SharedPtr cb_group;
         rclcpp::Client<SetBool>::SharedPtr maping_client;
         rclcpp::Publisher<repairs::PoseArray>::SharedPtr poses_pub_;
+        rclcpp::Publisher<String>::SharedPtr tool_pub_;
 
         PointCloud2::SharedPtr cloud_msg;
         repairs::RepairOperations repair_op;
