@@ -19,6 +19,9 @@ namespace ur16repair {
         menu_scan_env = menu_handler.insert(menu_repair, "Scan Environment", on_event);
         //Move 
         menu_home = menu_handler.insert("Home", on_event);
+        //tools
+        lock = menu_handler.insert("lock", on_event);
+        unlock = menu_handler.insert("unlock", on_event);
         
     }
 
@@ -29,6 +32,8 @@ namespace ur16repair {
         if (fb -> menu_entry_id == menu_detect_surfaces) cmd = "detect_surfaces";
         else if (fb -> menu_entry_id == menu_scan_env) cmd = "scan_env";
         else if (fb -> menu_entry_id == menu_home) cmd = "home";
+        else if (fb -> menu_entry_id == lock) cmd = "tool_lock";
+        else if (fb -> menu_entry_id == unlock) cmd = "tool_unlock";
 
         if (!cmd.empty() && selection_cb) selection_cb(cmd);
         

@@ -52,12 +52,19 @@ namespace repairs {
 
     void RepairOperations::getGrinder(const std::string &rb_ip) {
         moveHome(rb_ip);
+
         robot_->setTcp({0,0,0,0,0,0});
         robot_->moveJ({deg2rad(6.22), deg2rad(-90.27), deg2rad(-48.50),
                       deg2rad(-131.23), deg2rad(88.76), deg2rad(-83.74)}, rb_acc + 0.12, rb_vel + 0.12 );
-        
+        //tool request to unlock 
         robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
         robot_->moveL({0.412, -0.133, 0.41834, 3.121, -0.007, -0.044}, rb_acc, rb_vel);
+        //tool_request to lock
+        
+        robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
+        robot_->moveL({0.412, -0.133, 0.7 , 3.121, -0.007, -0.044}, rb_acc, rb_vel);
+
+
 
     }
     void RepairOperations::returnGrinder(const std::string &ip) {
@@ -83,7 +90,6 @@ namespace repairs {
                 std::asin(-R(2,0)),
                 std::atan2(R(1,0),R(0,0)) };
     }
-
     std::vector<std::vector<double>> RepairOperations::buildPath(const std::vector<Vec3> &c, double grid, double lift, int layers, double step_down) {
         /* ❶ copy python preprocessing */
         Vec3 op1=c[0], op2=c[1], op3=c[2], op4=c[3];
@@ -130,7 +136,6 @@ namespace repairs {
         }
         return wp;
     }
-
     void RepairOperations::executePath(const std::vector<std::vector<double>> &wp, double acc, double vel) {
         for (const auto &p : wp) 
             robot_->moveL(p, rb_acc, rb_vel);

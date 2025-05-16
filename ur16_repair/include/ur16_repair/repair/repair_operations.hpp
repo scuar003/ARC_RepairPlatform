@@ -17,6 +17,7 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Dense>
+#include <functional>
 
 namespace {
     inline double deg2rad(double d) {return d*M_PI/180.0;}
@@ -28,7 +29,7 @@ using namespace ur_rtde;
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 using PoseArray = geometry_msgs::msg::PoseArray;
 using Vec3 = Eigen::Vector3d;
-
+using ToolRequestFn = std::function<bool(const std::string&)>;
 
 class RepairOperations {
     public:
@@ -45,19 +46,20 @@ class RepairOperations {
 
     private:
         void connect(const std::string &robot_ip);
+
+
         static Vec3 normalFromCorners(const std::vector<Vec3> &c);
         static Vec3 rpyFromNormal(const Vec3 &n);
-
-    /* path generation & execution */
+        /* path generation & execution */
         std::vector<std::vector<double>> buildPath(const std::vector<Vec3> &c, 
                                                     double grid, double lift,
                                                     int layers, double step_down);
         void executePath(const std::vector<std::vector<double>> &wp, double acc, double vel);
         
-        std::unique_ptr<RTDEControlInterface> robot_;
+
         double rb_acc = 0.08;
         double rb_vel = 0.08;
-        
+        std::unique_ptr<RTDEControlInterface> robot_;
         std::string target_frame_;
         std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
