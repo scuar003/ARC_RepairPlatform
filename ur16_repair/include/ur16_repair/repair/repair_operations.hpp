@@ -18,6 +18,7 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include <functional>
+#include <repair_interface/msg/eigen_msg.hpp>
 
 namespace {
     inline double deg2rad(double d) {return d*M_PI/180.0;}
@@ -29,25 +30,26 @@ using namespace ur_rtde;
 using PointCloud2 = sensor_msgs::msg::PointCloud2;
 using PoseArray = geometry_msgs::msg::PoseArray;
 using Vec3 = Eigen::Vector3d;
+using CusEigen = repair_interface::msg::EigenMsg;
 using ToolRequestFn = std::function<bool(const std::string&)>;
 
 class RepairOperations {
     public:
         RepairOperations();
-        RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string& target_frame);
+        RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string& target_frame, ToolRequestFn tool_request);
         PoseArray detect(const PointCloud2::SharedPtr cloud_msg);
         void scanEnv(const std::string &rb_ip);
         void moveHome(const std::string &rb_ip);
         
         
-        void grindArea(const std::string& rb_ip, const PoseArray &area);
+        void grindArea(const std::string& rb_ip, const std::vector<CusEigen> &area);
         void getGrinder(const std::string& rb_ip);
         void returnGrinder(const std::string& rb_ip);
 
     private:
         void connect(const std::string &robot_ip);
 
-
+        void printPath(const std::vector<std::vector<double>> &wp) const;
         static Vec3 normalFromCorners(const std::vector<Vec3> &c);
         static Vec3 rpyFromNormal(const Vec3 &n);
         /* path generation & execution */
@@ -62,6 +64,7 @@ class RepairOperations {
         std::unique_ptr<RTDEControlInterface> robot_;
         std::string target_frame_;
         std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+        ToolRequestFn tool_request_;
 
 };
 

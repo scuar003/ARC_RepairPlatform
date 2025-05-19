@@ -58,7 +58,7 @@ ament_target_dependencies( repair_menu visualization_msgs interactive_markers)
 add_library(repair_operations ${repair_helpers})
 target_include_directories(repair_operations PUBLIC include)
 target_link_libraries(repair_operations ${UR_RTDE_LIBRARY} ur16_geometry)
-ament_target_dependencies(repair_operations rclcpp sensor_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs Open3D )
+ament_target_dependencies(repair_operations rclcpp repair_interface sensor_msgs visualization_msgs geometry_msgs tf2_ros tf2_geometry_msgs Open3D )
 
 #devel not fully tested
 add_library(ur16_geometry src/repair/plane_geometry.cpp)

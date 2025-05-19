@@ -2,8 +2,6 @@
 
 using namespace repairs;
 
-RepairOperations::RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string& target_frame)
-    : tf_buffer_(tf_buffer), target_frame_(target_frame) {}
 
 
 PoseArray RepairOperations::detect(const PointCloud2::SharedPtr cloud_msg_) {

@@ -5,6 +5,11 @@ namespace repairs {
 
     RepairOperations::RepairOperations() {}
 
+    RepairOperations::RepairOperations(std::shared_ptr<tf2_ros::Buffer> tf_buffer, 
+                                       const std::string& target_frame,
+                                       ToolRequestFn tool_request) : target_frame_{target_frame}, tf_buffer_{std::move(tf_buffer)}, 
+                                                                     tool_request_{std::move(tool_request)} {}
+
     void RepairOperations::connect(const std::string &rb_ip) {
         if(robot_ && robot_->isConnected()) return;
         std::cout << "Connecting to robot at: " << rb_ip << std::endl;
@@ -28,25 +33,30 @@ namespace repairs {
         robot_->moveJ({-3.08, -0.94, -1.33, -1.65, 1.55, 0.0}, rb_acc + 0.1  , rb_vel + 0.5);
     }
 
-    void RepairOperations::grindArea(const std::string &rb_ip, const PoseArray & area){
-        robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
-        robot_->moveL({0.412, -0.133, 0.7 , 3.121, -0.007, -0.044}, rb_acc, rb_vel);
+    void RepairOperations::grindArea(const std::string &rb_ip, const std::vector<CusEigen> &area){
+        getGrinder(rb_ip);
+        std::cout << "grinder has been picked, moving home now " << std::endl;
 
         robot_->setPayload(2.2, {-0.008,-0.02,0.062});
         robot_->setTcp({0.00344,0.13178,0.25004,0.0001,3.0982,0.4994});
         
+
         moveHome(rb_ip);
-        if(area.poses.size() < 4) {
+        std::cout << " Starting Grinding procces... " << std::endl;
+        if(area.size() < 4) {
             std::cerr << "Need Area of operation " << std::endl;
             return;
         }
         std::vector<Vec3> corner;
         for (int i = 0; i < 4; ++i) {
-            const auto &p = area.poses[i].position;
+            const auto &p = area[i];
             corner.emplace_back(-p.x, -p.y, p.z);
-        }
+        }   
         auto path = buildPath(corner, 0.01, 0.01, 2, 0.005);
-        executePath(path, 0.1, 0.1);   
+        printPath(path);
+        executePath(path, 0.1, 0.1);
+        path.clear();
+        returnGrinder(rb_ip);
 
     }
 
@@ -57,25 +67,47 @@ namespace repairs {
         robot_->moveJ({deg2rad(6.22), deg2rad(-90.27), deg2rad(-48.50),
                       deg2rad(-131.23), deg2rad(88.76), deg2rad(-83.74)}, rb_acc + 0.12, rb_vel + 0.12 );
         //tool request to unlock 
+        if(!tool_request_("tool_unlock"))
+            throw std::runtime_error("Failed to unlock tool-changer");
         robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
         robot_->moveL({0.412, -0.133, 0.41834, 3.121, -0.007, -0.044}, rb_acc, rb_vel);
         //tool_request to lock
+        if (!tool_request_("tool_lock"))
+            throw std::runtime_error("Failed to lock the tool-changer");
         
         robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
         robot_->moveL({0.412, -0.133, 0.7 , 3.121, -0.007, -0.044}, rb_acc, rb_vel);
 
-
-
     }
+    
     void RepairOperations::returnGrinder(const std::string &ip) {
         robot_->moveJ({deg2rad(6.22), deg2rad(-90.27), deg2rad(-48.50),
                     deg2rad(-131.23), deg2rad(88.76), deg2rad(-83.74)}, rb_acc + 0.12, rb_vel + 0.12 );
-
+        robot_->setTcp({0,0,0,0,0,0});
         robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
         robot_->moveL({0.412, -0.133, 0.41834, 3.121, -0.007, -0.044}, rb_acc, rb_vel);
-        robot_->setTcp({0,0,0,0,0,0});
+        if(!tool_request_("tool_unlock"))
+            throw std::runtime_error("Failed to unlock tool-changer");
+        
+        robot_->moveL({0.412, -0.133, 0.450, 3.121, -0.007, -0.044}, rb_acc + 0.1, rb_vel + 0.1);
+        robot_->moveL({0.412, -0.133, 0.7 , 3.121, -0.007, -0.044}, rb_acc, rb_vel); 
+        moveHome(ip);
     }              
 
+
+    void RepairOperations::printPath(const std::vector<std::vector<double>> &wp) const {
+        std::cout << "\n=== Generated moveL sequence (" << wp.size() << " points) ===\n";
+        for (const auto &p : wp) {
+            std::cout << "robot_->moveL({"
+                    << p[0] << ", "
+                    << p[1] << ", "
+                    << p[2] << ", "
+                    << p[3] << ", "
+                    << p[4] << ", "
+                    << p[5] << "}, rb_acc, rb_vel);" << std::endl;
+        }
+        std::cout << "=== end sequence ===\n" << std::endl;
+    }
     Vec3 RepairOperations::normalFromCorners(const std::vector<Vec3> &c) {
         Vec3 n = (c[2] - c[0]).cross(c[1] - c[0]);
         if (n.z() < 0) n = -n;
@@ -91,7 +123,6 @@ namespace repairs {
                 std::atan2(R(1,0),R(0,0)) };
     }
     std::vector<std::vector<double>> RepairOperations::buildPath(const std::vector<Vec3> &c, double grid, double lift, int layers, double step_down) {
-        /* ❶ copy python preprocessing */
         Vec3 op1=c[0], op2=c[1], op3=c[2], op4=c[3];
         Vec3 normal = normalFromCorners({op1,op2,op3});
         auto offs    = [&](const Vec3& p,double d){ return p - d*normal; };

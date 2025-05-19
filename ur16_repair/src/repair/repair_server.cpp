@@ -25,9 +25,15 @@ class RepairServer : public rclcpp::Node {
             robot_ip = this->get_parameter("robot_ip").as_string();
             target_frame = this->get_parameter("target_frame").as_string();
 
+            cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
+            maping_client = this->create_client<SetBool>("set_publish_active");
+            tool_client = rclcpp_action::create_client<RepairCommand>(this, "tool_server");
+            poses_pub_ = this->create_publisher<repairs::PoseArray>("rendered_surfaces", 10);
+
             tf_buffer = std::make_shared<tf2_ros::Buffer>(this->get_clock());
             tf_listener = std::make_unique<tf2_ros::TransformListener>(*tf_buffer);
-            repair_op = repairs::RepairOperations(tf_buffer, target_frame);
+            auto tool_cb = std::bind(&RepairServer::toolState, this, _1);
+            repair_op = repairs::RepairOperations(tf_buffer, target_frame, tool_cb);
 
             repair_server = rclcpp_action::create_server<RepairCommand>(
                 this, 
@@ -38,10 +44,7 @@ class RepairServer : public rclcpp::Node {
                 rcl_action_server_get_default_options(), cb_group );
                 RCLCPP_INFO(this->get_logger(), "Repair Server Ready to receive commands");
 
-            cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
-            maping_client = this->create_client<SetBool>("set_publish_active");
-            tool_client = rclcpp_action::create_client<RepairCommand>(this, "tool_server");
-            poses_pub_ = this->create_publisher<repairs::PoseArray>("rendered_surfaces", 10);
+            
             }
     private:
 
@@ -65,7 +68,7 @@ class RepairServer : public rclcpp::Node {
 
         void executeCb (const std::shared_ptr<RepairGoalHandle> goal_handle) {
             std::string cmd = goal_handle -> get_goal() -> command;
-            PoseArray area = goal_handle -> get_goal() -> area;
+            std::vector<repairs::CusEigen> area = goal_handle -> get_goal() -> area;
             auto result = std::make_shared<RepairCommand::Result>();
             RCLCPP_INFO(this->get_logger(), "Executing '%s' operation", cmd.c_str());
             //start execution of cmd 
@@ -84,13 +87,12 @@ class RepairServer : public rclcpp::Node {
                 RCLCPP_INFO(this->get_logger(), "Robot at Home Position ");
             }
             if(cmd == "grind") {
-                repair_op.getGrinder(robot_ip);
-                toolState(tool_reuqest);
-                //repair_op.grindArea(robot_ip, area);
+                //repair_op.getGrinder(robot_ip);
+                repair_op.grindArea(robot_ip, area);
                 //repair_op.returnGrinder(robot_ip);
             }
-            if (cmd == "tool_unlock") toolState(cmd);
-            if (cmd == "tool_lock") toolState(cmd);
+            //if (cmd == "tool_unlock") toolState(cmd);
+            //if (cmd == "tool_lock") toolState(cmd);
        
              
             result->completed = true;
@@ -117,34 +119,38 @@ class RepairServer : public rclcpp::Node {
             request ->data = false;
             maping_client -> async_send_request(request);
         }
-        void toolState(const std::string &s) {
-            auto goal = RepairCommand::Goal();
-            goal.command = s;
-            auto op = rclcpp_action::Client<RepairCommand>::SendGoalOptions();
-            op.result_callback = std::bind(&RepairServer::toolCb, this, _1);
-            tool_client->async_send_goal(goal, op);
+        bool toolState(const std::string &cmd) {
+            using namespace std::chrono_literals;
+            /* 1 — make sure the action‑server exists */
+            if (!tool_client->wait_for_action_server(2s)) {
+                RCLCPP_ERROR(get_logger(), "tool_server not up");
+                return false;
+            }
+            /* 2 — send the goal */
+            RepairCommand::Goal goal_msg;
+            goal_msg.command = cmd;
+            auto goal_future = tool_client->async_send_goal(goal_msg);
+
+            /* With a MultiThreadedExecutor the result‑handling thread(s) are
+            * already running, so we can just block on the future here.          */
+            if (goal_future.wait_for(5s) != std::future_status::ready) {
+                RCLCPP_ERROR(get_logger(), "Timed‑out sending goal '%s'", cmd.c_str());
+                return false;
+            }
+            auto goal_handle = goal_future.get();
+            if (!goal_handle) {
+                RCLCPP_ERROR(get_logger(), "Goal '%s' rejected by tool_server", cmd.c_str());
+                return false;
+            }
+            /* 3 — wait for the action result */
+            auto result_future = tool_client->async_get_result(goal_handle);
+            if (result_future.wait_for(30s) != std::future_status::ready) {
+                RCLCPP_ERROR(get_logger(), "Timed‑out waiting for result of '%s'", cmd.c_str());
+                return false;
+            }
+            auto result_code = result_future.get().code;
+            return result_code == rclcpp_action::ResultCode::SUCCEEDED;
         }
-
-        void toolCb(const ToolClientHandle::WrappedResult &r) {
-            auto status = r.code;
-            if (status == rclcpp_action::ResultCode::SUCCEEDED)
-                RCLCPP_INFO(get_logger(), "Goal  Succeeded ");
-            else if (status == rclcpp_action::ResultCode::CANCELED)
-                RCLCPP_INFO(get_logger(), "Goal Canceled ");
-            else if (status == rclcpp_action::ResultCode::ABORTED)
-                RCLCPP_INFO(get_logger(), "Goal Aborted ");
-        }
-
-        //void grind(const PoseArray &area) {
-        //     //tool off
-        //     repair_op.getGrinder(robot_ip);
-        //     //tool on 
-        //     repair_op.grindArea(robot_ip, area);
-        //     //tool off
-        //     repair_op.returnGrinder(robot_ip);
-        // //grinding complete
-        // }
-
 
         //members - atributes
         rclcpp_action::Server<RepairCommand>::SharedPtr repair_server;

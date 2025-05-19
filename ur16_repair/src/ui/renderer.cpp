@@ -4,6 +4,7 @@
 
 #include <ur16_repair/repair/plane_geometry.hpp>
 #include <repair_interface/action/repair_action.hpp>
+#include <repair_interface/msg/eigen_msg.hpp>
 
 
 #include <visualization_msgs/msg/marker.hpp>
@@ -23,7 +24,7 @@ using Menu = interactive_markers::MenuHandler;
 using MarkerFb = visualization_msgs::msg::InteractiveMarkerFeedback;
 using RepairCommand = repair_interface::action::RepairAction;
 using RepairGoalHandle = rclcpp_action::ClientGoalHandle<RepairCommand>;
-
+using CusEigen = repair_interface::msg::EigenMsg; // custom eigen msg;
 
 class Renderer : public rclcpp::Node {
     public:
@@ -506,21 +507,14 @@ class Renderer : public rclcpp::Node {
         void waitToExecute(const MarkerFb::ConstSharedPtr &fb, const std::string &cmd){
             if (fb -> event_type != MarkerFb::BUTTON_CLICK) return;
 
-            geometry_msgs::msg::PoseArray corners;
-            corners.header.frame_id = frame_id;
-            corners.header.stamp = get_clock() -> now();
-            for (const auto &point : repair_area_corners){
-                geometry_msgs::msg::Pose pose;
-                pose.position.x = point.x;
-                pose.position.y = point.y;
-                pose.position.z = point.z;
-
-                pose.orientation.x = 0.0f;
-                pose.orientation.y = 0.0f;
-                pose.orientation.z = 0.0f;
-                pose.orientation.w = 1.0f;
-
-                corners.poses.push_back(pose);
+            std::vector<CusEigen> corners;
+            corners.reserve(repair_area_corners.size());
+            for (const auto &pt: repair_area_corners) {
+                CusEigen v;
+                v.x = pt.x;
+                v.y = pt.y;
+                v.z = pt.z;
+                corners.push_back(v);
             }
             // request the server 
             //goal -> cmd = cmd 

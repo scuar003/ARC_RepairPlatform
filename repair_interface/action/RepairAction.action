@@ -1,6 +1,6 @@
 # Goal
 string command
-geometry_msgs/PoseArray area
+repair_interface/EigenMsg[] area
 ---
 # Result
 bool completed
