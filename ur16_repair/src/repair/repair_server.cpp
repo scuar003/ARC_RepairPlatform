@@ -71,35 +71,37 @@ class RepairServer : public rclcpp::Node {
             std::vector<repairs::CusEigen> area = goal_handle -> get_goal() -> area;
             auto result = std::make_shared<RepairCommand::Result>();
             RCLCPP_INFO(this->get_logger(), "Executing '%s' operation", cmd.c_str());
-            //start execution of cmd 
+            
+            
+            // --------- start execution of cmd ----------
             if(cmd == "detect_surfaces" ) {
                 auto corners = PoseArray();
                 corners = repair_op.detect(cloud_msg);
                 poses_pub_->publish(corners);
+                RCLCPP_INFO(this->get_logger(), "Surfaces published");
             }
+
             if(cmd == "scan_env" ) {
                 startMapping();
                 repair_op.scanEnv(robot_ip);
                 stopMapping();
+                RCLCPP_INFO(this-> get_logger(), "Scan Environment completed");
             }
+
             if (cmd == "home") {
                 repair_op.moveHome(robot_ip);
                 RCLCPP_INFO(this->get_logger(), "Robot at Home Position ");
             }
             if(cmd == "grind") {
-                //repair_op.getGrinder(robot_ip);
                 repair_op.grindArea(robot_ip, area);
-                //repair_op.returnGrinder(robot_ip);
+                RCLCPP_INFO(this -> get_logger(), "Grinding operation has finished");
             }
-            //if (cmd == "tool_unlock") toolState(cmd);
-            //if (cmd == "tool_lock") toolState(cmd);
-       
              
             result->completed = true;
             goal_handle->succeed(result);
         }
 
-        //-----------------------Helpers
+        //-----------------------Helpers-----------------------------------
         //pointcloud callback 
         void cloudCb(const PointCloud2::SharedPtr msg) {cloud_msg = msg;}
 
