@@ -1,0 +1,15 @@
+global:
+  frame_id: "base_link"
+  robot_ip: "192.168.1.85"
+
+voxel_mapper:
+  ros__parameters:
+    input_topic: "/point_cloud"
+    voxel_size: 0.02
+    sor_k: 24
+    sor_stddev: 1.5
+    use_radius: false
+    ror_k: 16
+    ror_radius: 0.05
+    publish_hz: 3.0
+    publish_active: false

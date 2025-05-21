@@ -55,7 +55,7 @@ public:
   {
     /* ---------------- Parameters ---------------- */
     declare_parameter<std::string>("input_topic", "/point_cloud");
-    declare_parameter<std::string>("target_frame", "base_link");
+    declare_parameter<std::string>("frame_id", "base_link");
     declare_parameter<double>("voxel_size",   0.02);   // m
     declare_parameter<int>("sor_k",           24);
     declare_parameter<double>("sor_stddev",   1.5);
@@ -66,7 +66,7 @@ public:
     declare_parameter<bool>("publish_active", false);  // <-- NEW
 
     input_topic_       = get_parameter("input_topic").as_string();
-    target_frame_      = get_parameter("target_frame").as_string();
+    target_frame_      = get_parameter("frame_id").as_string();
     voxel_resolution_  = get_parameter("voxel_size").as_double();
     sor_k_             = get_parameter("sor_k").as_int();
     sor_stddev_        = get_parameter("sor_stddev").as_double();

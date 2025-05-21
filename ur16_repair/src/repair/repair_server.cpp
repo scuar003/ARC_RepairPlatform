@@ -21,9 +21,9 @@ class RepairServer : public rclcpp::Node {
         RepairServer() : Node ("repair_server") {
             cb_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
             this->declare_parameter("robot_ip", "192.168.1.85");
-            this->declare_parameter("target_frame", "base_link");
+            this->declare_parameter("frame_id", "base_link");
             robot_ip = this->get_parameter("robot_ip").as_string();
-            target_frame = this->get_parameter("target_frame").as_string();
+            frame_id = this->get_parameter("frame_id").as_string();
 
             cloud_sub = this->create_subscription<PointCloud2>("/camera/depth/color/points", 10, std::bind(&RepairServer::cloudCb, this, _1));
             maping_client = this->create_client<SetBool>("set_publish_active");
@@ -33,7 +33,7 @@ class RepairServer : public rclcpp::Node {
             tf_buffer = std::make_shared<tf2_ros::Buffer>(this->get_clock());
             tf_listener = std::make_unique<tf2_ros::TransformListener>(*tf_buffer);
             auto tool_cb = std::bind(&RepairServer::toolState, this, _1);
-            repair_op = repairs::RepairOperations(tf_buffer, target_frame, tool_cb);
+            repair_op = repairs::RepairOperations(tf_buffer, frame_id, tool_cb);
 
             repair_server = rclcpp_action::create_server<RepairCommand>(
                 this, 
@@ -113,6 +113,7 @@ class RepairServer : public rclcpp::Node {
             request ->data = true;
             maping_client -> async_send_request(request);
         }
+        
         void stopMapping() {
             while(!maping_client -> wait_for_service(1s)) {
                 RCLCPP_INFO(this->get_logger(), "Wating for service...");
@@ -121,6 +122,7 @@ class RepairServer : public rclcpp::Node {
             request ->data = false;
             maping_client -> async_send_request(request);
         }
+
         bool toolState(const std::string &cmd) {
             using namespace std::chrono_literals;
             /* 1 — make sure the action‑server exists */
@@ -164,7 +166,7 @@ class RepairServer : public rclcpp::Node {
 
         PointCloud2::SharedPtr cloud_msg;
         repairs::RepairOperations repair_op;
-        std::string robot_ip, target_frame;
+        std::string robot_ip, frame_id;
         //transforms buffers
         std::shared_ptr<tf2_ros::Buffer> tf_buffer;
         std::unique_ptr<tf2_ros::TransformListener> tf_listener;

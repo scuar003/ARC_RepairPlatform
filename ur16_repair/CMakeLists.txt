@@ -96,7 +96,7 @@ add_executable(laser_to_cloud src/cloud/laser_to_cloud.cpp)
 ament_target_dependencies(laser_to_cloud rclcpp sensor_msgs  pcl_conversions tf2_ros  tf2_eigen)
 target_link_libraries(laser_to_cloud ${PCL_LIBRARIES}  Eigen3::Eigen)
 
-add_executable(voxel_mapper src/cloud/laser_map.cpp)
+add_executable(voxel_mapper src/cloud/voxel_mapper.cpp)
 ament_target_dependencies(voxel_mapper rclcpp sensor_msgs tf2_ros tf2_eigen pcl_conversions std_srvs)
 target_link_libraries(voxel_mapper ${PCL_INCLUDE_DIRS})
 
@@ -112,6 +112,12 @@ install(TARGETS
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
