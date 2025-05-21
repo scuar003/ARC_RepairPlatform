@@ -1,0 +1,3 @@
+# Append (or edit) these lines in .gitattributes
+README.md     merge=ours
+docs/README.md merge=ours        # add more paths if you have multiple READMEs
