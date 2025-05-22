@@ -1,4 +1,3 @@
-
 import os
 import yaml
 from launch import LaunchDescription
@@ -18,11 +17,36 @@ def launch_setup(context, *args, **kwargs):
     # Extract global parameters.
     global_params = params.get('global', {})
 
+    # Merge global parameters with the UR control node parameters.
+    ur_node_params = params.get('ur_control', {}).get('ros__parameters', {})
+    merged_ur_params = dict(global_params, **ur_node_params)
+    ur_type = merged_ur_params.get('ur_type', 'ur16e')
+    robot_ip = merged_ur_params.get('robot_ip', '192.168.56.101')
+    launch_rviz = merged_ur_params.get('launch_rviz', True)
+
+    # Include the UR control launch file with merged parameters.
+    ur_robot_driver_share_dir = get_package_share_directory('ur_robot_driver')
+    ur_control_launch_file = os.path.join(ur_robot_driver_share_dir, 'launch', 'ur_control.launch.py')
+    include_ur_control = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(ur_control_launch_file),
+        launch_arguments={
+            'ur_type': ur_type,
+            'robot_ip': robot_ip,
+            'launch_rviz': str(launch_rviz).lower()  # expects 'true' or 'false'
+        }.items()
+    )
+
     voxel_params = params.get('voxel_mapper', {}).get('ros__parameters', {})
     merge_voxel_params = dict(global_params, **voxel_params)
 
     # Build the rest of the launch description.
     nodes = [
+        Node (
+            package='rmw_zenoh_cpp',
+            executable='rmw_zenohd',
+            output='screen'
+        ),
+        include_ur_control,
         Node (
             package='ur16_repair',
             executable='supervisor',

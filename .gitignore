@@ -1,3 +1,7 @@
+/ur16_repair/launch/ur16_devel.launch.py
+
+.gitattributes
+
 .vscode
 # Prerequisites
 *.d
