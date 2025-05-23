@@ -22,11 +22,19 @@ find_package(pcl_conversions REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common filters octree)
 find_package(std_srvs REQUIRED)
+find_package(ur_rtde REQUIRED)
 
 
 
+option(USE_DOCKER "Use Docker configuration" ON)
 
-set(UR_RTDE_DIR "/home/robotics/p_devel/libs_/ur_rtde")
+# Handles docker llibrary
+if(USE_DOCKER)
+  set(UR_RTDE_DIR "$ENV{WORKSPACE}/libs_/ur_rtde")
+else()
+  set(UR_RTDE_DIR "/home/robotics/p_devel/libs_/ur_rtde")
+endif()
+
 set(UR_RTDE_INCLUDE_DIR "${UR_RTDE_DIR}/include")
 set(UR_RTDE_LIBRARY "${UR_RTDE_DIR}/build/librtde.so")
 
