@@ -89,21 +89,30 @@ ros2 launch ur16_repair ur16_repair.launch.py
 ssh arc@<NUC_IP>
 #in the ssh session 
 tmux
-# terminal 1
+```
+#### terminal 1
+```bash
 cd ~/zenoh_ws
 #source 
 rsc; srcws
 ros2 run rmw_zenoh_cpp rmw_zenohd
-# terminal 2
+```
+
+#### terminal 2
+```bash
 cd ~/ur16_ws
 rsc; srcws
 ros2 run demo_py_ready tool_change
-# terminal 3
+```
+#### terminal 3
+```bash
 cd ~/realsense_lidar
 #source
 rsc; srcws
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true
-#terminal 4
+```
+#### terminal 4
+```bash
 cd ~/rplidar
 rsc; srcws
 ros2 launch rplidar_ros rplidar_s2_launch.py
