@@ -82,6 +82,33 @@ source ~/repair_platform_ws/install/setup.bash
 ros2 launch ur16_repair ur16_repair.launch.py
 ```
 
+### 6 - Start Nuc Coms
+
+```bash
+#ssh into nuc 
+ssh arc@<NUC_IP>
+#in the ssh session 
+tmux
+# terminal 1
+cd ~/zenoh_ws
+#source 
+rsc; srcws
+ros2 run rmw_zenoh_cpp rmw_zenohd
+# terminal 2
+cd ~/ur16_ws
+rsc; srcws
+ros2 run demo_py_ready tool_change
+# terminal 3
+cd ~/realsense_lidar
+#source
+rsc; srcws
+ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true
+#terminal 4
+cd ~/rplidar
+rsc; srcws
+ros2 launch rplidar_ros rplidar_s2_launch.py
+```
+
 This launch file starts:
 
 - **Tool server** & action server (handles `RepairAction` goals).
