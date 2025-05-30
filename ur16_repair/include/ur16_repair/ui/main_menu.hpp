@@ -35,7 +35,7 @@ class MainMenu {
         SelectionCb selection_cb;
         Menu menu_handler;
         Menu::EntryHandle menu_repair, menu_detect_surfaces, menu_scan_env,
-                          menu_home, lock, unlock;
+                          menu_home, clean;
         
 };
 

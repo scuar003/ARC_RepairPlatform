@@ -96,6 +96,14 @@ class RepairServer : public rclcpp::Node {
                 repair_op.grindArea(robot_ip, area);
                 RCLCPP_INFO(this -> get_logger(), "Grinding operation has finished");
             }
+            /*-----------------------------------------------------------------------*/
+            ///-------------------------CLEANING------------------------------------///
+            if(cmd == "clean") {
+                repair_op.clean(robot_ip, area);
+                RCLCPP_INFO(this -> get_logger(), "Cleaning operation has finished");
+
+            }
+            /*-----------------------------------------------------------------------*/
              
             result->completed = true;
             goal_handle->succeed(result);

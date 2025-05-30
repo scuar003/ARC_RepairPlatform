@@ -338,8 +338,8 @@ class Renderer : public rclcpp::Node {
             expo_marker = menu_handler_.insert(interactions, "expo_marker", std::bind(&Renderer::stateCb, this, _1));
             menu_handler_.setCheckState(expo_marker, Menu::UNCHECKED);
     
-            vacum = menu_handler_.insert(interactions, "Vacum", std::bind(&Renderer::stateCb, this, _1));
-            menu_handler_.setCheckState(vacum, Menu::UNCHECKED);
+            clean = menu_handler_.insert(interactions, "Vacum", std::bind(&Renderer::stateCb, this, _1));
+            menu_handler_.setCheckState(clean, Menu::UNCHECKED);
     
             //second entry
             clear_selection = menu_handler_.insert("Clear Selection", std::bind(&Renderer::clearSelection, this, _1));
@@ -350,17 +350,17 @@ class Renderer : public rclcpp::Node {
             if(handle == grind) {
                 menu_handler_.setCheckState(grind, Menu::CHECKED);
                 menu_handler_.setCheckState(expo_marker, Menu::UNCHECKED);
-                menu_handler_.setCheckState(vacum, Menu::UNCHECKED);
+                menu_handler_.setCheckState(clean, Menu::UNCHECKED);
                 repair_area.clear();
             }
             if (handle == expo_marker) {
                 menu_handler_.setCheckState(expo_marker, Menu::CHECKED);
                 menu_handler_.setCheckState(grind, Menu::UNCHECKED);
-                menu_handler_.setCheckState(vacum, Menu::UNCHECKED);
+                menu_handler_.setCheckState(clean, Menu::UNCHECKED);
                 repair_area.clear();                
             }
-            if (handle == vacum) {
-                menu_handler_.setCheckState(vacum, Menu::CHECKED);
+            if (handle == clean) {
+                menu_handler_.setCheckState(clean, Menu::CHECKED);
                 menu_handler_.setCheckState(expo_marker, Menu::UNCHECKED);
                 menu_handler_.setCheckState(grind, Menu::UNCHECKED); 
                 repair_area.clear();
@@ -401,8 +401,8 @@ class Renderer : public rclcpp::Node {
             menu_handler_.getCheckState(grind, state);
             if (state == Menu::CHECKED) cmd = "grind";
 
-            menu_handler_.getCheckState(vacum, state);
-            if (state == Menu::CHECKED) cmd = "vacum";
+            menu_handler_.getCheckState(clean, state);
+            if (state == Menu::CHECKED) cmd = "clean";
 
             menu_handler_.getCheckState(expo_marker, state);
             if (state == Menu::CHECKED) cmd = "expo_marker";
@@ -562,7 +562,7 @@ class Renderer : public rclcpp::Node {
 
         //Menu 
         Menu menu_handler_;
-        Menu::EntryHandle interactions, grind, expo_marker, vacum, clear_selection, handle,
+        Menu::EntryHandle interactions, grind, expo_marker, clean, clear_selection, handle,
                           menu_operation_handler;
 };
 

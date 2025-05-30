@@ -46,6 +46,14 @@ class RepairOperations {
         void getGrinder(const std::string& rb_ip);
         void returnGrinder(const std::string& rb_ip);
 
+        ///------------------------------ Cleaning operations --------------------------------------///
+
+
+
+        void clean(const std::string &rb_ip, const std::vector<CusEigen> &area);
+
+        ///------------------------------------------------------------------------------------------///
+
     private:
         void connect(const std::string &robot_ip);
 
