@@ -65,7 +65,7 @@ def launch_setup(context, *args, **kwargs):
             executable='static_transform_publisher',
             name='static_transform_publisher_tool0',
             output='screen',
-            arguments=['-0.13', '-0.03', '0.04', '0', '1.57', '3.14', 'tool0', 'lase']
+            arguments=['-0.13', '-0.03', '0.04', '0', '1.57', '3.14', 'tool0', 'laser']
         )
     ]
     
