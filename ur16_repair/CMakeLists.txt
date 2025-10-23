@@ -30,7 +30,7 @@ find_package(ur_rtde REQUIRED)
 
 
 
-option(USE_DOCKER "Use Docker configuration" ON)
+option(USE_DOCKER "Use Docker configuration" OFF)
 
 # Handles docker llibrary
 if(USE_DOCKER)

@@ -61,11 +61,17 @@ source install/setup.bash    # add to ~/.bashrc if desired
 ### 4 – Bring up the UR‑16e driver
 
 ```bash
-# Terminal 1 – robot control
+#### --- RUN ZENOH ROUTER --- ####
+zenoh
+cd zenoh_ws/
+rsc; srcws
+ros2 run rmw_zeno <TAB TAB>
+# Terminal 2 – robot control
 source /opt/ros/humble/setup.bash
 # If the UR driver has its own workspace:
 source ~/ur_driver_ws/install/setup.bash
 
+#SANTI PC Handyman_ws
 ros2 launch ur_robot_driver ur_control.launch.py \
     ur_type:=ur16e \
     robot_ip:=<ROBOT_IP> \
@@ -77,7 +83,7 @@ _Wait for “Robot ready to receive URScript” before continuing._
 ### 5 – Launch the repair platform
 
 ```bash
-# Terminal 2 – ARC_RepairPlatform
+# Terminal 3 – ARC_RepairPlatform
 source ~/repair_platform_ws/install/setup.bash
 ros2 launch ur16_repair ur16_repair.launch.py
 ```
@@ -102,7 +108,7 @@ ros2 run rmw_zenoh_cpp rmw_zenohd
 ```bash
 cd ~/ur16_ws
 rsc; srcws
-ros2 run demo_py_ready tool_change
+ros2 launch robot_control r_contron.launch.py
 ```
 #### terminal 3
 ```bash
